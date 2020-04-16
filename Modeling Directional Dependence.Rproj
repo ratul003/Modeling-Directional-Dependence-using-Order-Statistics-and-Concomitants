@@ -1,0 +1,436 @@
+# Introduction
+
+Directional dependence involves studying changes in the distributional behavior of one variable initiated not necessarily caused by another random variable. Directional dependency is a method to determine the likely causal direction of effect between two or more variables. It can help to determine which of the correlation variables can be designated as the explanatory variable. It is determined by comparing the shapes of the distributions of continuous random variables. In bivariate or multivariate setting, if large (small) values of the random variables tend to occur together then the direction of dependence is positive; and if the large values of one variable tend to occur with small values of the other then the direction of dependence is negative. 
+
+Causal inference is the process of drawing a conclusion about a causal connection based on the conditions of the occurrence of an effect. The main difference between causal inference and inference of association is that the former analyzes the response of the effect variable when the cause is changed. Causal models are mathematical models used to represent causal relationships within a population and attempt to extend the framework by including causal relationships, in which changes in one variable causes changes in other variables.
+
+
+
+
+
+# Getting Started with Directional Dependence
+
+Our model for understanding directional dependence through the order is based on the following argument as it is graphically represented in the directional dependence cycle. If the directional dependence from $X$ to $Y$ ($Y$ to $X$) is strong then $X(Y)$ will initiate a “substantial” change in the ordering of $Y(X)$ reflected on the concomitants leading to a weaker dependence between concomitant and the marginal ordering of $Y(X)$. The strength of change imposed (weakness of dependence) may be used to determine the dominant directional dependence. 
+
+```{r,fig.align='center',echo=FALSE}
+knitr::include_graphics("DDcycle.png",auto_pdf=FALSE)
+```
+
+Figure 1. Distribution Cycle. The key random variables and their roles on understanding marginal and joint behaviors of (X,Y)
+
+
+```{r,fig.align='center',echo=FALSE}
+knitr::include_graphics("ShortDDcycle.png",auto_pdf=FALSE)
+```
+
+Figure 2. Key components to measure the directional dependency of bivariate variables
+
+@Bennett2006 discusses on applications of causal complexity and unpacks the concept of path dependence and its component elements of causal possibility, contingency, closure of alternatives, and constraints to the current path. This article would help us understand how to facilitate the search for omitted variables that might lie behind contingent events, and interaction effects within one or few cases. The techniques mentioned by [@Bennett2006] would help me understand the framework and constraints of causal effects of multivariables.  
+
+@Sungur introduces a way of looking at directional dependence by using concomitants of order statistics in two-dimensional case. This approach allows us to measure the strength of direction of dependence and provides tools for deeper understanding of the hidden information in data. This article would help utilize the dependence cycle for multivariables and help understand how correlation within variables change with the directional dependency using marginal and joint behaviors of ($X$,$Y$),
+
+# Data Simulation
+
+## Bivariate Normal Distribution Simulation
+
+```{r}
+library(fMultivar)
+# Creating a vector
+mu=c(2,3)
+# Creating a matrix sigma that is variance-covariance matrix of variables. This matrix is a postive definite symmetric maxtrix
+sigma1=matrix(c(9,6,6,16),2,2) # A (2x2) matrix
+```
+
+Now we can generate two variables having correlation= 0.5, variance(1)= 9, variance(2)=16, Covariance=6.
+(No. of variables is order of sigma matrix i.e- 2 in this case).
+
+
+```{r}
+#options(stringsAsFactors = FALSE)
+
+#checkpoint::checkpoint("2015-07-02")
+
+# Now generating 10 observations of 2 normally distributed random variables 
+library(mvtnorm)
+#library(MASS)
+library(knitr)
+Sim1=rmvnorm(100,mu,sigma1)
+colnames(Sim1)<-c("X","Y")
+kable(head(Sim1))
+```
+
+Now creating ordered X,Y and concomitants of X,Y.
+
+- $X(i:n)$= Ordered X
+- $X[i:n]$= Value of X associated with ordered $Y(i:n)$
+  - $Y(i:n)$= Ordered Y
+- $Y[i:n]$= Value of Y associated with ordered $X(i:n)$
+  
+  ```{r}
+# Ordering X(i:n) and Y[i:n]
+Sim1OX<-Sim1[order( Sim1[,1], Sim1[,2]),]
+colnames(Sim1OX)<-c("X(i:n)","y[i:n]")
+
+# Ordering Y(i:n) and X[i:n]
+Sim1OY<-Sim1[order( Sim1[,2], Sim1[,1]),]
+colnames(Sim1OY)<-c("x[i:n]","Y(i:n)")
+
+# Combining all the columns and creating a dataframe
+BivariateFrame=data.frame(Sim1,Sim1OX,Sim1OY)
+#kable(head(BivariateFrame))
+
+# Now calculating partial correlation between X(i:n), X[i:n] & Y(i:n), Y[i:n]
+library(ggpubr)
+# Partial correlation between X and X(i:n) given Y
+cor(BivariateFrame$X, BivariateFrame$X.i.n.,method="pearson")
+# Partial correlation between X(i:n) and Y[i:n] given X
+cor(BivariateFrame$X.i.n, BivariateFrame$y.i.n.,method="pearson")
+# Partial correlation between Y(i:n) and Y[i:n] given X
+cor(BivariateFrame$Y.i.n., BivariateFrame$y.i.n.,method="pearson")
+# Partial correlation between Y(i:n) and Y given X
+cor(BivariateFrame$Y.i.n., BivariateFrame$Y,method="pearson")
+# Partial correlation between Y(i:n) and Y given X
+cor(BivariateFrame$Y.i.n., BivariateFrame$Y,method="pearson")
+# Partial correlation between Y(i:n) and X[i:n] given Y
+cor(BivariateFrame$Y.i.n., BivariateFrame$x.i.n.,method="pearson")
+# Partial correlation between X(i:n) and X[i:n] given Y
+cor(BivariateFrame$X.i.n., BivariateFrame$x.i.n.,method="pearson")
+# Partial correlation between X and X(i:n) given Y
+cor(BivariateFrame$X, BivariateFrame$X.i.n.,method="pearson")
+# Correlation between X and Y
+cor(BivariateFrame$X,BivariateFrame$Y,method="pearson")
+# Correlation between Y and X
+cor(BivariateFrame$X,BivariateFrame$Y,method="pearson")
+
+library(corrplot)
+# Creating Correlation matrix
+kable(cor(BivariateFrame))
+CorBivariate<-cor(BivariateFrame)
+corrplot.mixed(CorBivariate,upper = "number",lower = "color",order="hclust",main= "Correlation Matrix Plot")
+
+```
+
+Now calculating partial correlation between $Y_[i:n]$$Y_(i:n)$ and $X_[i:n]$$X_(i:n)$
+  
+  ```{r}
+cor(BivariateFrame$Y.i.n., BivariateFrame$y.i.n.,method="pearson")
+cor(BivariateFrame$X.i.n., BivariateFrame$x.i.n.,method="pearson")
+
+library(plot3D)
+library(plotly)
+
+# Plotting with X= Response and Y = Predictor
+ggplot1<-ggplot(BivariateFrame,aes(BivariateFrame$X,BivariateFrame$Y))
+ggplot1<-ggplot1+geom_point() + stat_smooth(method = 'lm',se=FALSE)
+ggplot1<-ggplotly(ggplot1)
+ggplot1
+
+ggplot2<-ggplot(BivariateFrame,aes(BivariateFrame$Y,BivariateFrame$X))
+ggplot2<-ggplot2+geom_point() + stat_smooth(method = 'lm',se=FALSE)
+ggplot2<-ggplotly(ggplot2)
+ggplot2
+
+ggplot3<-ggplot(BivariateFrame,aes(BivariateFrame$X.i.n.,BivariateFrame$y.i.n.))
+ggplot3<-ggplot3+geom_point() + stat_smooth(method = 'lm',se=FALSE)
+ggplot3<-ggplotly(ggplot3)
+ggplot3
+
+ggplot4<-ggplot(BivariateFrame,aes(BivariateFrame$Y.i.n.,BivariateFrame$x.i.n.))
+ggplot4<-ggplot4+geom_point() + stat_smooth(method = 'lm',se=FALSE)
+ggplot4<-ggplotly(ggplot4)
+ggplot4
+
+scatter2D(BivariateFrame$X,BivariateFrame$Y,colvar = BivariateFrame$X.i.n..1,pch=16,bty="n",type="b")
+scatter2D(BivariateFrame$Y,BivariateFrame$X,colvar = BivariateFrame$Y.i.n.,pch=16,bty="n",type="b")
+```
+
+## Bivariate Uniform Distribution Simulation
+
+```{r}
+# Creating Random U vector
+randomU1i<-runif(100,min=0,max=50)
+randomU2i<-runif(100,min=0,max=50)
+#kable(head(randomU1i))
+#kable(head(randomU2i))
+
+# Creating dataframe of U vectors from uniform distribution simulation
+Sim3i=cbind(c(randomU1i),c(randomU2i))
+#kable(head(Sim3i))
+
+# Creating vector matrix (A) using conditions (a11 > a12, a21 < -a22, a11 > 0 a12 > 0, a21 > 0, a22 < 0).
+A = matrix( c(2,3,1,-4),nrow=2,ncol=2)
+A
+
+# Creating the X vector and Y vector by multiplying the U vector with linearly independent A matrix
+Sim3=Sim3i%*%A
+
+colnames(Sim3)<-c("X","Y")
+#kable(head(Sim3))
+
+
+```
+
+
+Now creating ordered X,Y and concomitants of X,Y.
+
+$x(i:n)$= Ordered X
+$x[i:n]$= Value of X associated with ordered $Y(i:n)$
+  $y(i:n)$= Ordered Y
+$y[i:n]$= Value of Y associated with ordered $X(i:n)$
+  
+  
+  ```{r}
+# Ordering X(i:n) and Y[i:n]
+Sim3OX<-Sim3[order( Sim3[,1], Sim3[,2]),]
+colnames(Sim3OX)<-c("X(i:n)","y[i:n]")
+
+# Ordering Y(i:n) and X[i:n]
+Sim3OY<-Sim3[order( Sim3[,2], Sim3[,1]),]
+colnames(Sim3OY)<-c("x[i:n]","Y(i:n)")
+
+# Combining all the columns and creating a dataframe
+UnivariateFrame=data.frame(Sim3,Sim3OX,Sim3OY)
+#kable(head(UnivariateFrame))
+
+# Now calculating partial correlation between x(i:n), x[i:n] & y(i:n), y[i:n]
+
+# Partial correlation between x and x(i:n) given y
+cor(UnivariateFrame$X,UnivariateFrame$X.i.n.,method="pearson")
+# Partial correlation between x(i:n) and y[i:n] given x
+cor(UnivariateFrame$X.i.n.,UnivariateFrame$y.i.n.,method="pearson")
+# Partial correlation between y(i:n) and y given x
+cor(UnivariateFrame$y.i.n.,UnivariateFrame$Y,method="pearson")
+# Partial correlation between y(i:n) and y given x
+cor(UnivariateFrame$Y.i.n.,UnivariateFrame$Y,method="pearson")
+# Partial correlation between y(i:n) and x[i:n] given y
+cor(UnivariateFrame$Y.i.n.,UnivariateFrame$x.i.n.,method="pearson")
+
+# Partial correlation between x and x(i:n) given y
+cor(UnivariateFrame$X,UnivariateFrame$X.i.n.,method="pearson")
+
+# Correlation between X and Y
+cor(UnivariateFrame$X,UnivariateFrame$Y,method="pearson")
+# Correlation between Y and X
+cor(UnivariateFrame$Y,UnivariateFrame$X,method="pearson")
+
+# Observing Directional Dependence between variables
+
+# Partial correlation between y(i:n) and y[i:n] given x
+cor(UnivariateFrame$Y.i.n.,UnivariateFrame$y.i.n.,method="pearson")
+
+# Partial correlation between x(i:n) and x[i:n] given y
+cor(UnivariateFrame$X.i.n.,UnivariateFrame$x.i.n.,method="pearson")
+
+
+
+```
+
+## Creating Directional Dependence Cycle
+
+```{r,fig.align='center',echo=FALSE}
+knitr::include_graphics("NormalDistDDcycle.png",auto_pdf=FALSE)
+```
+
+
+Figure 3. Directional Dependency cycle using the Bivariate Normal Distribution
+Focusing on the directional dependency:
+  Bivariate Normal Distribution
+
+- $(Y[i:n]Y(i:n)|X)$ = 0.50 
+- $(X[i:n]X(i:n)|Y)$ = 0.48
+
+Since 
+$(Y[i:n]Y(i:n)|X)$ = $(X[i:n]X(i:n)|Y)$ , 
+there is no directional dependency when the datapoints are normally distributed.
+
+
+```{r}
+## Creating Correlation matrix
+kable(cor(UnivariateFrame))
+CorUnivariate<-cor(BivariateFrame)
+corrplot.mixed(CorUnivariate,upper = "number",lower = "color",order="hclust",main= "Correlation Matrix Plot")
+
+ggplot5<-ggplot(UnivariateFrame,aes(UnivariateFrame$X,UnivariateFrame$Y))
+ggplot5<-ggplot5+geom_point() + stat_smooth(method = 'lm',se=FALSE)
+ggplot5<-ggplotly(ggplot5)
+ggplot5
+
+ggplot6<-ggplot(UnivariateFrame,aes(UnivariateFrame$Y,UnivariateFrame$X))
+ggplot6<-ggplot6+geom_point() + stat_smooth(method = 'lm',se=FALSE)
+ggplot6<-ggplotly(ggplot6)
+ggplot6
+
+ggplot7<-ggplot(UnivariateFrame,aes(UnivariateFrame$X.i.n.,UnivariateFrame$y.i.n.))
+ggplot7<-ggplot7+geom_point() + stat_smooth(method = 'lm',se=FALSE)
+ggplot7<-ggplotly(ggplot7)
+ggplot7
+
+ggplot8<-ggplot(UnivariateFrame,aes(UnivariateFrame$Y.i.n.,UnivariateFrame$x.i.n.))
+ggplot8<-ggplot8+geom_point() + stat_smooth(method = 'lm',se=FALSE)
+ggplot8<-ggplotly(ggplot8)
+ggplot8
+
+
+
+
+
+scatter2D(UnivariateFrame$x,UnivariateFrame$y,colvar = UnivariateFrame$y.i.n.,pch=16,bty="n",type="b",ylab="X",xlab="Y")
+scatter2D(UnivariateFrame$y,UnivariateFrame$x,colvar = UnivariateFrame$x.i.n.,pch=16,bty="n",type="b",ylab="y",xlab="x")
+
+plot(UnivariateFrame$x,UnivariateFrame$y,xlab="x",ylab="y")
+plot(UnivariateFrame$y,UnivariateFrame$x,xlab="y",ylab="x")
+
+```
+
+
+
+
+
+```{r,fig.align='center',echo=FALSE}
+knitr::include_graphics("UniformDDcycle.png",auto_pdf=FALSE)
+```
+
+Bivariate Uniform Distribution 
+
+- $(Y[i:n]Y(i:n)|X)$ = -0.73
+- $(X[i:n]X(i:n)|Y)$ = 0.53
+
+Since  $(Y[i:n]Y(i:n)|X)$ > $(X[i:n]X(i:n)|Y)$, 
+$y(x)$ causes a substantial change in marginal distribution as compared to $x(y)$.
+
+
+
+### Creating data table
+
+
+
+### Creating functions that will generate random sequence of numbers and create random matrices satisfying the conditions
+
+The following function will make an array that satisfies your requirements
+
+
+```{r}
+# Creating Random U vector
+randomU<-runif(100,min=0,max=100)
+randomV<-runif(100,min=0,max=100)
+
+makeArray=function(n){
+  swap=function(array){
+    tmp<-array[1]
+    array[1]<-array[2]
+    array[2]<-tmp
+    array
+  }  
+  alpha=runif(2,0,20)
+  if(alpha[1]<alpha[2]){alpha<-swap(alpha)}
+  beta=runif(2,0,20)
+  beta[2]=beta[2]*-1
+  if(beta[1]>-beta[2]){beta<-swap(beta)}
+  MAT=cbind(alpha,beta)
+  Sim3=Sim3i%*%MAT
+  colnames(Sim3)<-c("x","y")
+  Sim3OX<-Sim3[order( Sim3[,1], Sim3[,2]),]
+  colnames(Sim3OX)<-c("x(i:n)","y[i:n]")
+  Sim3OY<-Sim3[order( Sim3[,2], Sim3[,1]),]
+  colnames(Sim3OY)<-c("x[i:n]","y(i:n)")
+  univariateframe=data.frame(Sim3,Sim3OX,Sim3OY)
+  DeltaAlpha=(round(MAT[[1,1]] - MAT[[2,1]],digits=2))
+  DeltaBeta=(round(MAT[[2,1]]-MAT[[2,2]],digits = 2))
+  Pxy=round(cor(univariateframe$x.i.n.,univariateframe$x.i.n..1,method="pearson"),digits = 2)
+  Pyx=round(cor(univariateframe$y.i.n.,univariateframe$y.i.n..1,method="pearson"),digits=2)
+  DeltaCorrelation=round(abs(Pxy) -abs(Pyx),digits=2)
+  return(data.frame(DeltaAlpha=DeltaAlpha, DeltaBeta=DeltaBeta,Pxy=Pxy,Pyx=Pyx, DeltaCorrelation=Pxy-Pyx))
+}
+```
+
+
+We'll use `lapply` to run the function 10 times and store the results in a list:
+
+```{r}
+results<-lapply(1:100,makeArray)
+library(plyr)
+Rtable=ldply(results,data.frame)
+head(Rtable)
+
+library(plotly)
+Rmatrix=data.matrix(Rtable,rownames.force = NA)
+
+scatter3D(Rmatrix[,"DeltaAlpha"],Rmatrix[,"DeltaBeta"],Rmatrix[,"DeltaCorrelation"],type="h")
+
+library(akima)
+dens <- interp(Rtable$DeltaAlpha, Rtable$DeltaBeta, Rtable$DeltaCorrelation,duplicate="mean")
+fancyplot=plot_ly(x=dens$x,y=dens$y,z=dens$z)%>%add_surface()
+fancyplot
+
+p <- plot_ly(x=dens$x,y=dens$y,z=dens$z) %>% add_surface(
+contours = list(
+z = list(
+show=TRUE,
+usecolormap=TRUE,
+highlightcolor="#ff0000",
+project=list(z=TRUE)
+)
+)
+) %>%
+layout(
+scene = list(
+camera=list(
+eye = list(x=1.87, y=0.88, z=-0.64)
+)
+)
+)
+
+p
+
+```
+
+```{r}
+p1 <- plot_ly(
+Rtable, x = ~Rtable$DeltaAlpha, y = ~Rtable$DeltaCorrelation,
+color = ~Rtable$DeltaCorrelation, size = ~Rtable$DeltaCorrelation
+)
+p1
+
+p2 <- plot_ly(
+Rtable, x = ~Rtable$DeltaBeta, y = ~Rtable$DeltaCorrelation,
+color = ~Rtable$DeltaCorrelation, size = ~Rtable$DeltaCorrelation
+)
+p2
+```
+
+
+
+```{r}
+library(hexbin)
+library(RColorBrewer)
+bin<-hexbin(Rtable$DeltaAlpha, Rtable$DeltaCorrelation, xbins=40)
+my_colors=colorRampPalette(rev(brewer.pal(11,'Spectral')))
+plot(bin, main="" , colramp=my_colors , legend=FALSE ) 
+```
+
+Let's suppose your processing function is called `test()` that will generate Xs and Ys, X(i:n) and Y[i:n], X[i:n] & Y(i:n) and the directional dependence (Px->y, Py->x) with different set of random alphas and betas.
+
+
+
+Now the test function is being applied to all the list of random matrices, thus creating 100 random sets Xs and Ys. From there we can calculate the directional dependence for 100 random sets of Xs and Ys. The goal is to find the set of parameters of the matrices that will give us strongest directional dependence between X and Y.
+
+
+
+
+# Current and Future Work:   
+
+Until now,the distribution cycle is built on two variables. However, I plan to include more variables to observe the correlation between each node as we add more variables in the analysis.
+
+We have worked with bivariate sampling algorithm to see how the directional dependence between $X$ and $Y$ changes as the sample size changes. Copulas are bivariate distribution function of two uniform random variables that helps eliminate the influence of marginal behavior and provide a clear look at the dependence structure. We have created copula C, i.e. $F(x,y)$ = $C(Fx (x)$, $Fy (y))$ to tell us about the even distribution of directional dependence of variables in joint behavior for two variables.  I plan to include more variables to generalize what type pf copula regardless the size of $n$. However, the challenging part would be that as $n$ increases, we expect to get really big power of polynomials.
+
+
+# Literature Reviews
+
+@Pearl2016 helps answer three types of causal queries : (1) queries about the effects of potential interventions, (2) queries about probabilities of counterfactual, and (3) queries about direct and indirect effects. The author emphasizes on the possible existence of (direct) causal influence of $X$ and $Y$, and the absence of causal influence of $Y$ on $X$ using the path diagrams, which provides a framework to work on how the causal connection would be effected if exogenous, endogenous and other variables are included. 
+
+@Granville1996 provided a sampling algorithm which helped us study the bivariate joint distribution of copula, assuming the marginals were known. Results showed that the copula had very similar pattern on 3D contour plots, we could use the alrogithm to generalize fully multivariate cases with appropriate permutations.
+
+@Bennett2006 discusses on applications of causal complexity and unpacks the concept of path dependence and its component elements of causal possibility, contingency, closure of alternatives, and constraints to the current path. This article would help us understand how to facilitate the search for omitted variables that might lie behind contingent events, and interaction effects within one or few cases. The techniques mentioned by [@Bennett2006] would help me understand the framework and constraints of causal effects of multivariables.  
+
+@Sungur introduces a way of looking at directional dependence by using concomitants of order statistics in two-dimensional case. This approach allows us to measure the strength of direction of dependence and provides tools for deeper understanding of the hidden information in data. This article would help utilize the dependence cycle for multivariables and help understand how correlation within variables change with the directional dependency using marginal and joint behaviors of ($X$,$Y$),
+
